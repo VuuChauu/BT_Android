@@ -1,0 +1,11 @@
+<resources>
+    <color name="black">#000000</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+
+
+    <color name="bg_main">#4A90E2</color>
+    <color name="bg_edit">#8E44AD</color>
+    <color name="white">#FFFFFF</color>
+</resources>
