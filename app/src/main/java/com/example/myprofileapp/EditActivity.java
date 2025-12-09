@@ -1,5 +1,6 @@
 package com.example.myprofileapp;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
@@ -12,20 +13,25 @@ import android.widget.*;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
 public class EditActivity extends AppCompatActivity {
-    // tạo các biến
+
     ImageView imgEditAvatar;
-    Button btnChooseImage, btnSave;
+    Button btnChooseImage, btnSave, btnChup;
     EditText etName, etEmail, etMajor;
     SharedPreferences prefs;
     String savedImagePath = null;
 
     ActivityResultLauncher<Intent> galleryLauncher;
-    // khởi tạo
+    ActivityResultLauncher<Intent> cameraLauncher;
+    ActivityResultLauncher<String> permissionLauncher;
+
+    Uri cameraImageUri;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,6 +40,7 @@ public class EditActivity extends AppCompatActivity {
         imgEditAvatar = findViewById(R.id.imgEditAvatar);
         btnChooseImage = findViewById(R.id.btnChooseImage);
         btnSave = findViewById(R.id.btnSave);
+        btnChup = findViewById(R.id.btnChup);
         etName = findViewById(R.id.etName);
         etEmail = findViewById(R.id.etEmail);
         etMajor = findViewById(R.id.etMajor);
@@ -42,7 +49,7 @@ public class EditActivity extends AppCompatActivity {
 
         loadOldData();
 
-        // Chọn ảnh từ gallery
+
         galleryLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -58,6 +65,34 @@ public class EditActivity extends AppCompatActivity {
             Intent pick = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
             galleryLauncher.launch(pick);
         });
+
+
+
+        cameraLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        if (cameraImageUri != null) {
+                            imgEditAvatar.setImageURI(cameraImageUri);
+                            savedImagePath = saveImageToInternal(cameraImageUri);
+                        }
+                    }
+                }
+        );
+        permissionLauncher =
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                        granted -> {
+                            if (granted) {
+                                openCamera();
+                            } else {
+                                Toast.makeText(this, "Bạn phải cấp quyền Camera", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
+        btnChup.setOnClickListener(v -> {
+            permissionLauncher.launch(Manifest.permission.CAMERA);
+        });
+
 
 
         btnSave.setOnClickListener(v -> {
@@ -83,6 +118,8 @@ public class EditActivity extends AppCompatActivity {
         });
     }
 
+
+
     private void loadOldData() {
         etName.setText(prefs.getString("name", ""));
         etEmail.setText(prefs.getString("email", ""));
@@ -96,6 +133,31 @@ public class EditActivity extends AppCompatActivity {
             }
         }
     }
+
+
+    private void openCamera() {
+        try {
+            File file = new File(getFilesDir(), "camera_avatar.jpg");
+
+            cameraImageUri = androidx.core.content.FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".provider",
+                    file
+            );
+
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            cameraLauncher.launch(intent);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "Không mở được camera!", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
 
     private String saveImageToInternal(Uri uri) {
         try {
@@ -112,6 +174,7 @@ public class EditActivity extends AppCompatActivity {
             return null;
         }
     }
+
 
     private boolean isValidGmail(String email) {
         return !TextUtils.isEmpty(email) &&
